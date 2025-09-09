@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escape del Laboratorio Criogénico</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #0a0a2a;
+            color: #00ffcc;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            border: 2px solid #00ffcc;
+            border-radius: 10px;
+            padding: 20px;
+            background-color: rgba(0, 0, 20, 0.8);
+            box-shadow: 0 0 15px #00ffcc;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        .timer {
+            text-align: center;
+            font-size: 24px;
+            margin: 20px 0;
+            color: #ff9966;
+        }
+        .pregunta {
+            background-color: rgba(0, 30, 60, 0.7);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .pista {
+            color: #ffcc00;
+            font-style: italic;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #001122;
+            color: #00ffcc;
+            border: 1px solid #00ffcc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #003366;
+            color: #00ffcc;
+            border: 1px solid #00ffcc;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: block;
+            margin: 20px auto;
+            font-family: 'Courier New', monospace;
+        }
+        button:hover {
+            background-color: #004488;
+            box-shadow: 0 0 10px #00ffcc;
+        }
+        .game-over, .victoria {
+            text-align: center;
+            font-size: 24px;
+            color: #ff0000;
+            text-shadow: 0 0 10px #ff0000;
+            animation: pulse 1s infinite;
+        }
+        .victoria {
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        .historia {
+            margin-bottom: 20px;
+            border-left: 3px solid #00ffcc;
+            padding-left: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ESCAPE DEL LABORATORIO CRIOGÉNICO</h1>
+        
+        <div class="timer" id="timer">
+            Tiempo restante: 40:00
+        </div>
+        
+        <div class="historia" id="historia">
+            <p>La alarma suena estridentemente. '¡Falla criogénica inminente! Tiempo estimado hasta congelación total: 40 minutos'. Debes escapar de este laboratorio antes de que todo quede congelado. La primera puerta está sellada térmicamente.</p>
+        </div>
+        
+        <div class="pregunta" id="pregunta-container">
+            <h2 id="nivel-titulo">DESAFÍO 1:</h2>
+            <p id="enunciado">Estás frente a una puerta sellada criogénicamente. Para abrirla, debes calcular: Si mezclas 2 litros de agua a 80°C con 3 litros de agua a 20°C, ¿cuál será la temperatura final de la mezcla? (Considera que la densidad del agua es 1 kg/L y el calor específico es constante). Responde solo con el número en Celsius, redondeado al entero más cercano.</p>
+            <p class="pista" id="pista">Pista: Recuerda la fórmula: m1*c*(Tf - T1) + m2*c*(Tf - T2) = 0</p>
+            
+            <form id="respuesta-form">
+                <input type="text" id="respuesta-input" autocomplete="off" autofocus>
+                <button type="submit">ENVIAR RESPUESTA</button>
+            </form>
+        </div>
+        
+        <div id="reiniciar-container" style="display: none; text-align: center;">
+            <button id="reiniciar-btn">JUGAR DE NUEVO</button>
+        </div>
+    </div>
+
+    <script>
+        // Variables del juego
+        let nivel = 1;
+        let tiempoInicio;
+        let tiempoLimite = 40 * 60; // 40 minutos en segundos
+        let gameOver = false;
+        let victoria = false;
+        let temporizador;
+
+        // Preguntas y respuestas
+        const preguntas = [
+            {
+                enunciado: "Estás frente a una puerta sellada criogénicamente. Para abrirla, debes calcular: Si mezclas 2 litros de agua a 80°C con 3 litros de agua a 20°C, ¿cuál será la temperatura final de la mezcla? (Considera que la densidad del agua es 1 kg/L y el calor específico es constante). Responde solo con el número en Celsius, redondeado al entero más cercano.",
+                pista: "Recuerda la fórmula: m1*c*(Tf - T1) + m2*c*(Tf - T2) = 0",
+                respuesta: "44"
+            },
+            {
+                enunciado: "Has llegado al sistema de control de temperatura. Para reactivarlo, resuelve: ¿Cuánto calor se necesita para elevar la temperatura de 500 g de aluminio de 20°C a 100°C? (Calor específico del aluminio: 900 J/kg°C). Responde en julios, solo el número.",
+                pista: "Usa la fórmula: Q = m * c * ΔT",
+                respuesta: "36000"
+            },
+            {
+                enunciado: "Encuentras un termostato dañado. Para repararlo, responde: Si una muestra de cobre (c = 385 J/kg°C) pierde 2500 J de calor y su temperatura disminuye de 100°C a 50°C, ¿cuál es la masa de la muestra? Responde en kilogramos, con un decimal.",
+                pista: "Despeja la masa de: Q = m * c * ΔT",
+                respuesta: "0.1"
+            },
+            {
+                enunciado: "Te enfrentas a una compuerta criogénica. Para pasar, calcula: ¿A qué temperatura equivalen 68°F en la escala Celsius? Responde solo con el número en Celsius, redondeado al entero.",
+                pista: "Fórmula: °C = (°F - 32) / 1.8",
+                respuesta: "20"
+            },
+            {
+                enunciado: "Último desafío: El sistema criogénico principal está fallando. Para desactivarlo, resuelve: Si 100 g de vapor de agua a 100°C se condensan y enfrían a 40°C, ¿cuánto calor se libera? (Calor latente de vaporización del agua: 2260 kJ/kg, calor específico del agua: 4186 J/kg°C). Responde en kilojulios, con un decimal.",
+                pista: "Considera dos procesos: condensación (Q = m * Lv) y enfriamiento (Q = m * c * ΔT)",
+                respuesta: "254.2"
+            }
+        ];
+
+        // Textos de la historia según nivel
+        const historias = [
+            "La alarma suena estridentemente. '¡Falla criogénica inminente! Tiempo estimado hasta congelación total: 40 minutos'. Debes escapar de este laboratorio antes de que todo quede congelado. La primera puerta está sellada térmicamente.",
+            "Has logrado pasar la primera puerta. El sistema de control de temperatura parpadea con luces de advertencia. Debes reactivarlo para continuar.",
+            "El sistema de control vuelve a funcionar, pero solo parcialmente. Un termostato crítico está dañado y necesita reparación urgente.",
+            "Con el termostato reparado, avanzas hacia el núcleo del laboratorio. Una compuerta criogénica se interpone en tu camino.",
+            "Estás en la sala de control principal. El sistema criogénico principal muestra lecturas críticas. Esta es tu última oportunidad para evitar la catástrofe."
+        ];
+
+        // Inicializar juego
+        function iniciarJuego() {
+            nivel = 1;
+            tiempoInicio = Date.now();
+            tiempoLimite = 40 * 60;
+            gameOver = false;
+            victoria = false;
+            
+            actualizarInterfaz();
+            iniciarTemporizador();
+            
+            document.getElementById('pregunta-container').style.display = 'block';
+            document.getElementById('reiniciar-container').style.display = 'none';
+        }
+
+        // Actualizar la interfaz según el estado actual del juego
+        function actualizarInterfaz() {
+            if (victoria) {
+                document.getElementById('historia').innerHTML = "<p>Lograste restaurar todos los sistemas a tiempo. El laboratorio se ha salvado y los datos críticos de investigación están seguros. ¡Eres un héroe!</p>";
+                document.getElementById('pregunta-container').style.display = 'none';
+                document.getElementById('reiniciar-container').style.display = 'block';
+                return;
+            }
+            
+            if (gameOver) {
+                document.getElementById('historia').innerHTML = "<p>El sistema criogénico falló por completo. Todo el laboratorio se ha congelado y los datos de investigación se han perdido irremediablemente. La misión ha fracasado.</p>";
+                document.getElementById('pregunta-container').style.display = 'none';
+                document.getElementById('reiniciar-container').style.display = 'block';
+                return;
+            }
+            
+            // Actualizar historia
+            document.getElementById('historia').innerHTML = `<p>${historias[nivel-1]}</p>`;
+            
+            // Actualizar pregunta
+            document.getElementById('nivel-titulo').textContent = `DESAFÍO ${nivel}:`;
+            document.getElementById('enunciado').textContent = preguntas[nivel-1].enunciado;
+            document.getElementById('pista').textContent = `Pista: ${preguntas[nivel-1].pista}`;
+            document.getElementById('respuesta-input').value = '';
+        }
+
+        // Iniciar el temporizador
+        function iniciarTemporizador() {
+            clearInterval(temporizador);
+            
+            temporizador = setInterval(() => {
+                const tiempoTranscurrido = Math.floor((Date.now() - tiempoInicio) / 1000);
+                const tiempoRestante = tiempoLimite - tiempoTranscurrido;
+                
+                if (tiempoRestante <= 0 && !victoria) {
+                    gameOver = true;
+                    clearInterval(temporizador);
+                    actualizarInterfaz();
+                    return;
+                }
+                
+                const minutos = Math.floor(tiempoRestante / 60);
+                const segundos = tiempoRestante % 60;
+                
+                document.getElementById('timer').textContent = 
+                    `Tiempo restante: ${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        // Manejar envío de respuestas
+        document.getElementById('respuesta-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (gameOver || victoria) return;
+            
+            const respuestaUsuario = document.getElementById('respuesta-input').value.trim().toLowerCase();
+            const respuestaCorrecta = preguntas[nivel-1].respuesta.toLowerCase();
+            
+            if (respuestaUsuario === respuestaCorrecta) {
+                nivel++;
+                
+                if (nivel > preguntas.length) {
+                    victoria = true;
+                    clearInterval(temporizador);
+                }
+            } else {
+                // Restar tiempo por respuesta incorrecta (2 minutos)
+                tiempoLimite -= 120;
+                
+                // Asegurarse de que el tiempo no sea negativo
+                if (tiempoLimite < 0) tiempoLimite = 0;
+            }
+            
+            actualizarInterfaz();
+        });
+
+        // Botón de reinicio
+        document.getElementById('reiniciar-btn').addEventListener('click', iniciarJuego);
+
+        // Iniciar el juego cuando se carga la página
+        window.addEventListener('load', iniciarJuego);
+    </script>
+</body>
+</html>
